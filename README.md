@@ -45,6 +45,13 @@ pip install pyyaml
 # Skills (same as Claude Code)
 cp -r skills/research-en/* ~/.claude/skills/   # or research-zh for Chinese
 
+# Required: Enable web search for current shell
+export OPENCODE_ENABLE_EXA=1
+
+# Optional: make it permanent
+echo 'export OPENCODE_ENABLE_EXA=1' >> ~/.bashrc
+source ~/.bashrc
+
 # Required: Install agent and modules
 cp agents/web-search-opencode.md ~/.config/opencode/agents/web-search.md
 cp -r agents/web-search-modules ~/.config/opencode/agents/
@@ -53,7 +60,7 @@ cp -r agents/web-search-modules ~/.config/opencode/agents/
 pip install pyyaml
 ```
 
-> **Important**: When OpenCode uses a Codex model, it currently does **not** have native `web search`; only `web fetch` is available. This matters for the deep research phase and should be called out explicitly.
+> **Important**: In OpenCode, ANY model's websearch requires `OPENCODE_ENABLE_EXA=1`. A plain `export` only affects the current shell; writing it to `~/.bashrc` makes it persistent. Without it, you only get `web fetch`, which is weaker for the deep research phase.
 
 ### Codex
 ```bash
