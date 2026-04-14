@@ -1,6 +1,6 @@
 ---
 name: research-deep
-description: Read research outline, launch independent agent for each item for deep research. Disable task output.
+description: Read a research project, launch parallel deep-research tasks, and write validated JSON outputs per item.
 ---
 
 # Research Deep - Deep Research
@@ -10,29 +10,39 @@ description: Read research outline, launch independent agent for each item for d
 
 ## Workflow
 
-### Step 1: Auto-locate Outline
-Find `*/outline.yaml` file in current working directory, read items list, execution config (including items_per_agent).
+### Step 1: Locate the Project
+Find `*/outline.yaml` under the current working directory.
+
+If multiple candidates exist, ask the user which project directory to use.
+
+Read from `outline.yaml`:
+- `topic`
+- `topic_slug`
+- `project_dir`
+- `items`
+- `execution.batch_size`
+- `execution.items_per_agent`
+- `execution.output_dir`
+
+Resolve:
+- `project_dir`: absolute path from `outline.yaml`
+- `fields_path`: `{project_dir}/fields.yaml`
+- `output_dir`: resolve `execution.output_dir` relative to `project_dir` if needed
+- `validator_path`: absolute path to the bundled validator script in this skill directory
 
 ### Step 2: Resume Check
-- Check completed JSON files in output_dir
-- Skip completed items
+- Create `output_dir` if missing
+- Check completed JSON files in `output_dir`
+- Skip completed items unless the user explicitly asks for regeneration
 
 ### Step 3: Batch Execution
-- Batch by batch_size (need user approval before next batch)
-- Each agent handles items_per_agent items
-- Launch web-search-agent (background parallel, disable task output)
+- Execute in batches of `batch_size`
+- Each agent handles `items_per_agent` items
+- Use background parallel agents when possible
+- Ask for user confirmation before starting the next batch only if the workload is large or the user asked for staged execution
 
-**Parameter Retrieval**:
-- `{topic}`: topic field from outline.yaml
-- `{item_name}`: item's name field
-- `{item_related_info}`: item's complete yaml content (name + category + description etc.)
-- `{output_dir}`: execution.output_dir from outline.yaml (default: ./results)
-- `{fields_path}`: absolute path to {topic}/fields.yaml
-- `{output_path}`: absolute path to {output_dir}/{item_name_slug}.json (slugify item_name: replace spaces with _, remove special chars)
+**Hard Constraint**: Reproduce the following prompt exactly, only replacing variables in `{...}`.
 
-**Hard Constraint**: The following prompt must be strictly reproduced, only replacing variables in {xxx}, do not modify structure or wording.
-
-**Prompt Template**:
 ```python
 prompt = f"""## Task
 Research {item_related_info}, output structured JSON to {output_path}
@@ -51,48 +61,36 @@ Read {fields_path} to get all field definitions
 
 ## Validation
 After completing JSON output, run validation script to ensure complete field coverage:
-python ~/.codex/skills/research/validate_json.py -f {fields_path} -j {output_path}
+python {validator_path} -f {fields_path} -j {output_path}
 Task is complete only after validation passes.
 """
 ```
 
-**One-shot Example** (assuming researching GitHub Copilot):
-```
-## Task
-Research name: GitHub Copilot
-category: International Product
-description: Developed by Microsoft/GitHub, first mainstream AI coding assistant, ~40% market share, output structured JSON to {project_dir}/results/GitHub_Copilot.json
+### Step 4: Validation and Monitoring
+- Run the validator after each JSON is produced
+- Treat validation failure as task failure
+- Show progress by completed item count and failed item names
 
-## Field Definitions
-Read {project_dir}/fields.yaml to get all field definitions
-
-## Output Requirements
-1. Output JSON according to fields defined in fields.yaml
-2. Mark uncertain field values with [uncertain]
-3. Add uncertain array at the end of JSON, listing all uncertain field names
-4. All field values must be in English
-
-## Output Path
-{project_dir}/results/GitHub_Copilot.json
-
-## Validation
-After completing JSON output, run validation script to ensure complete field coverage:
-python ~/.codex/skills/research/validate_json.py -f {project_dir}/fields.yaml -j {project_dir}/results/GitHub_Copilot.json
-Task is complete only after validation passes.
-```
-
-### Step 4: Wait and Monitor
-- Wait for current batch to complete
-- Launch next batch
-- Display progress
-
-### Step 5: Summary Report
-After all complete, output:
+### Step 5: Summary
+After all items finish, report:
 - Completion count
-- Failed/uncertain marked items
+- Failed items
+- Items containing uncertain values
 - Output directory
+
+## Output Contract
+Each item writes one JSON file:
+
+```text
+{output_dir}/{item_name_slug}.json
+```
+
+Rules:
+- `item_name_slug` should replace spaces with `_` and remove filesystem-hostile characters.
+- JSON must cover every defined field when possible; if not, use `[uncertain]` and include the field name in `uncertain`.
+- The validator script is the source of truth for schema coverage.
 
 ## Agent Config
 - Background execution: Yes
-- Task Output: Disabled (agent has explicit output file when complete)
+- Task output: Disabled when the agent writes the JSON file directly
 - Resume support: Yes

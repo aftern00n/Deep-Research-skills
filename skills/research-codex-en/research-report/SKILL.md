@@ -1,6 +1,6 @@
 ---
 name: research-report
-description: Summarize deep research results into markdown report, cover all fields, skip uncertain values.
+description: Render a markdown report from deep-research JSON results using the bundled report generator.
 ---
 
 # Research Report - Summary Report
@@ -10,82 +10,58 @@ description: Summarize deep research results into markdown report, cover all fie
 
 ## Workflow
 
-### Step 1: Locate Results Directory
-Find `*/outline.yaml` in current working directory, read topic and output_dir config.
+### Step 1: Locate the Project
+Find `*/outline.yaml` under the current working directory.
 
-### Step 2: Scan Optional Summary Fields
-Read all JSON results, extract fields suitable for TOC display (numeric, short metrics), e.g.:
-- github_stars
-- google_scholar_cites
-- swe_bench_score
-- user_scale
-- valuation
-- release_date
+If multiple projects exist, ask the user which one to render.
 
-Use request_user_input to ask user:
-- Which fields to display in TOC besides item name?
-- Provide dynamic options list (based on actual fields in JSON)
+Read:
+- `topic`
+- `project_dir`
+- `execution.output_dir`
 
-### Step 3: Generate Python Conversion Script
-Generate `generate_report.py` in `{topic}/` directory, script requirements:
-- Read all JSON from output_dir
-- Read fields.yaml to get field structure
-- Cover all field values from each JSON
-- Skip fields with values containing [uncertain]
-- Skip fields listed in uncertain array
-- Generate markdown report format: Table of contents (with anchor links + user-selected summary fields) + Detailed content (by field category)
-- Save to `{topic}/report.md`
+Resolve `output_dir` relative to `project_dir` if it is not already absolute.
 
-**TOC Format Requirements**:
-- Must include every item
-- Each item displays: number, name (anchor link), user-selected summary fields
-- Example: `1. [GitHub Copilot](#github-copilot) - Stars: 10k | Score: 85%`
+### Step 2: Choose TOC Summary Fields
+Read all JSON files in `output_dir` and collect short candidate fields suitable for the table of contents, for example:
+- `release_date`
+- `github_stars`
+- `valuation`
+- `user_scale`
+- `score`
 
-#### Script Technical Requirements (Must Follow)
+Ask the user which fields to show next to each item name.
 
-**1. JSON Structure Compatibility**
-Support two JSON structures:
-- Flat structure: Fields directly at top level `{"name": "xxx", "release_date": "xxx"}`
-- Nested structure: Fields in category sub-dict `{"basic_info": {"name": "xxx"}, "technical_features": {...}}`
+### Step 3: Run the Bundled Report Generator
+Use the bundled script in this skill directory:
 
-Field lookup order: Top level -> category mapping key -> Traverse all nested dicts
-
-**2. Category Multi-language Mapping**
-fields.yaml category names and JSON keys can be any combination (CN-CN, CN-EN, EN-CN, EN-EN). Must establish bidirectional mapping:
-```python
-CATEGORY_MAPPING = {
-    "Basic Info": ["basic_info", "Basic Info"],
-    "Technical Features": ["technical_features", "technical_characteristics", "Technical Features"],
-    "Performance Metrics": ["performance_metrics", "performance", "Performance Metrics"],
-    "Milestone Significance": ["milestone_significance", "milestones", "Milestone Significance"],
-    "Business Info": ["business_info", "commercial_info", "Business Info"],
-    "Competition & Ecosystem": ["competition_ecosystem", "competition", "Competition & Ecosystem"],
-    "History": ["history", "History"],
-    "Market Positioning": ["market_positioning", "market", "Market Positioning"],
-}
+```text
+research-report/generate_report.py
 ```
 
-**3. Complex Value Formatting**
-- list of dicts (e.g., key_events, funding_history): Format each dict as one line, separate kv with ` | `
-- Normal list: Short lists joined with comma, long lists displayed with line breaks
-- Nested dict: Recursive formatting, display with semicolon or line breaks
-- Long text strings (over 100 chars): Add line breaks `<br>` or use blockquote format for readability
+Run it with:
+- `--project-dir {project_dir}`
+- optional repeated `--summary-field <field_name>`
 
-**4. Extra Fields Collection**
-Collect fields that exist in JSON but not defined in fields.yaml, put in "Other Info" category. Note to filter:
-- Internal fields: `_source_file`, `uncertain`
-- Nested structure top-level keys: `basic_info`, `technical_features` etc.
-- `uncertain` array: Display each field name on separate line, don't compress into one line
+The script must:
+- Read `outline.yaml`, `fields.yaml`, and all JSON files from `output_dir`
+- Support both flat JSON and nested category JSON
+- Skip values containing `[uncertain]`
+- Skip fields named in the JSON `uncertain` array
+- Render `report.md` into `{project_dir}/report.md`
 
-**5. Uncertain Value Skipping**
-Skip conditions:
-- Field value contains `[uncertain]` string
-- Field name is in `uncertain` array
-- Field value is None or empty string
+### Step 4: Confirm Output
+Show:
+- Item count rendered
+- Output path
+- Any items skipped due to missing JSON
 
-### Step 4: Execute Script
-Run `python {topic}/generate_report.py`
+## Bundled Generator Requirements
+The generator already handles:
+- Category alias mapping between human-readable names and JSON keys
+- Recursive formatting for dicts and lists
+- Collection of extra fields into `Other Info`
+- Filtering of uncertain values
 
 ## Output
-- `{topic}/generate_report.py` - Conversion script
-- `{topic}/report.md` - Summary report
+- `{project_dir}/report.md` - summary report

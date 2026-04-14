@@ -1,6 +1,6 @@
 ---
 name: research
-description: Conduct preliminary research on a topic and generate research outline. For academic research, benchmark research, technology selection, etc.
+description: Conduct preliminary research on a topic and generate a reusable project outline for deep research and reporting.
 ---
 
 # Research Skill - Preliminary Research
@@ -8,29 +8,27 @@ description: Conduct preliminary research on a topic and generate research outli
 ## Trigger
 `/research <topic>`
 
+## Goal
+Create a self-contained research project directory that later steps can execute without guessing schemas or paths.
+
 ## Workflow
 
 ### Step 1: Generate Initial Framework from Model Knowledge
-Based on topic, use model's existing knowledge to generate:
-- Main research objects/items list in this domain
-- Suggested research field framework
+Based on the topic, use model knowledge to draft:
+- Main research objects/items in this domain
+- Suggested field framework for later structured collection
 
-Output {step1_output}, use request_user_input to confirm:
-- Need to add/remove items?
-- Does field framework meet requirements?
+Show the draft to the user and confirm:
+- Whether any items should be added or removed
+- Whether the field framework is sufficient
 
 ### Step 2: Web Search Supplement
-Use request_user_input to ask for time range (e.g., last 6 months, since 2024, unlimited).
+Ask the user for a time range (for example: last 6 months, since 2024, unlimited).
 
-**Parameter Retrieval**:
-- `{topic}`: User input research topic
-- `{YYYY-MM-DD}`: Current date
-- `{step1_output}`: Complete output from Step 1
-- `{time_range}`: User specified time range
+Launch 1 background web-search agent to supplement the initial framework.
 
-**Hard Constraint**: The following prompt must be strictly reproduced, only replacing variables in {xxx}, do not modify structure or wording.
+**Hard Constraint**: Reproduce the following prompt exactly, only replacing variables in `{...}`.
 
-Launch 1 web-search-agent (background), **Prompt Template**:
 ```python
 prompt = f"""## Task
 Research topic: {topic}
@@ -64,80 +62,85 @@ Return structured results directly (do not write files):
 """
 ```
 
-**One-shot Example** (assuming researching AI Coding History):
-```
-## Task
-Research topic: AI Coding History
-Current date: 2025-12-30
-
-Based on the following initial framework, supplement latest items and recommended research fields.
-
-## Existing Framework
-### Items List
-1. GitHub Copilot: Developed by Microsoft/GitHub, first mainstream AI coding assistant
-2. Cursor: AI-first IDE, based on VSCode
-...
-
-### Field Framework
-- Basic Info: name, release_date, company
-- Technical Features: underlying_model, context_window
-...
-
-## Goals
-1. Verify if existing items are missing important objects
-2. Supplement items based on missing objects
-3. Continue searching for AI Coding History related items within since 2024 and supplement
-4. Supplement new fields
-
-## Output Requirements
-Return structured results directly (do not write files):
-
-### Supplementary Items
-- item_name: Brief explanation (why it should be added)
-...
-
-### Recommended Supplementary Fields
-- field_name: Field description (why this dimension is needed)
-...
-
-### Sources
-- [Source1](url1)
-- [Source2](url2)
-```
-
 ### Step 3: Ask User for Existing Fields
-Use request_user_input to ask if user has existing field definition file, if so read and merge.
+Ask whether the user already has a field definition file. If yes, read it and merge it into the final schema.
 
-### Step 4: Generate Outline (Separate Files)
-Merge {step1_output}, {step2_output} and user's existing fields, generate two files:
+### Step 4: Generate Project Files
+Merge the initial framework, web supplement, and any user-provided fields into a project directory:
 
-**outline.yaml** (items + config):
-- topic: Research topic
-- items: Research objects list
-- execution:
-  - batch_size: Number of parallel agents (confirm with request_user_input)
-  - items_per_agent: Items per agent (confirm with request_user_input)
-  - output_dir: Results output directory (default: ./results)
+`./{topic_slug}/`
 
-**fields.yaml** (field definitions):
-- Field categories and definitions
-- Each field's name, description, detail_level
-- detail_level hierarchy: brief -> moderate -> detailed
-- uncertain: Uncertain fields list (reserved field, auto-filled in deep phase)
+Create:
+- `outline.yaml`
+- `fields.yaml`
+- `results/` directory
 
-### Step 5: Output and Confirm
-- Create directory: `./{topic_slug}/`
-- Save: `outline.yaml` and `fields.yaml`
-- Show to user for confirmation
+### Step 5: Show and Confirm
+Present the generated paths and summarize:
+- Topic
+- Item count
+- Field count
+- Execution settings
+
+## Required File Contracts
+
+### `outline.yaml`
+Must use this structure:
+
+```yaml
+topic: Example Topic
+topic_slug: example-topic
+project_dir: /absolute/path/to/example-topic
+items:
+  - name: Example Item
+    category: Example Category
+    description: Short explanation
+execution:
+  batch_size: 3
+  items_per_agent: 1
+  output_dir: ./results
+```
+
+Rules:
+- `topic_slug` must be filesystem-safe and match the created directory name.
+- `project_dir` must be an absolute path to the project directory.
+- `execution.output_dir` may be relative, but it is always resolved relative to `project_dir`.
+
+### `fields.yaml`
+Must use this structure:
+
+```yaml
+field_categories:
+  - category: Basic Info
+    fields:
+      - name: name
+        description: Item name
+        detail_level: brief
+        required: true
+      - name: release_date
+        description: Public release date
+        detail_level: moderate
+        required: false
+uncertain: []
+```
+
+Rules:
+- Top-level key must be `field_categories`.
+- Each category entry must use the key `category`.
+- Each field entry must include `name`, `description`, and `detail_level`.
+- `required` is optional but recommended. If omitted, it defaults to `false`.
+- Reserve top-level `uncertain` for later deep-research output; keep it as an empty list here.
 
 ## Output Path
-```
+```text
 {current_working_directory}/{topic_slug}/
-  ├── outline.yaml    # items list + execution config
-  └── fields.yaml     # field definitions
+  ├── outline.yaml
+  ├── fields.yaml
+  └── results/
 ```
 
 ## Follow-up Commands
-- `/research-add-items` - Supplement items
-- `/research-add-fields` - Supplement fields
-- `/research-deep` - Start deep research
+- `/research-add-items` - supplement items in `outline.yaml`
+- `/research-add-fields` - supplement fields in `fields.yaml`
+- `/research-deep` - collect structured JSON results for each item
+- `/research-report` - render `report.md` from JSON results
