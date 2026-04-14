@@ -18,7 +18,8 @@ CATEGORY_MAPPING = {
     "Market Positioning": ["market_positioning", "market", "Market Positioning"],
 }
 
-SKIP_KEYS = {"_source_file", "uncertain"}
+REFERENCE_KEYS = {"references", "sources", "links", "reference_links", "source_links"}
+SKIP_KEYS = {"_source_file", "uncertain", *REFERENCE_KEYS}
 
 
 def slugify(value):
@@ -112,6 +113,53 @@ def contains_uncertain(value):
     if isinstance(value, dict):
         return any(contains_uncertain(item) for item in value.values())
     return False
+
+
+def extract_references(data):
+    if not isinstance(data, dict):
+        return []
+
+    raw_references = None
+    for key in REFERENCE_KEYS:
+        value = data.get(key)
+        if value not in (None, "", [], {}):
+            raw_references = value
+            break
+
+    if raw_references is None:
+        return []
+
+    normalized = []
+    seen = set()
+
+    def add_reference(label, url):
+        if not url:
+            return
+        url = str(url).strip()
+        if not re.match(r"^https?://", url):
+            return
+        label = str(label).strip() if label else url
+        key = (label, url)
+        if key in seen:
+            return
+        seen.add(key)
+        normalized.append((label, url))
+
+    if isinstance(raw_references, str):
+        add_reference(None, raw_references)
+    elif isinstance(raw_references, list):
+        for item in raw_references:
+            if isinstance(item, str):
+                add_reference(None, item)
+            elif isinstance(item, dict):
+                url = item.get("url") or item.get("link") or item.get("href")
+                label = item.get("label") or item.get("title") or item.get("name") or item.get("source")
+                add_reference(label, url)
+    elif isinstance(raw_references, dict):
+        for label, url in raw_references.items():
+            add_reference(label, url)
+
+    return normalized
 
 
 def iter_extra_fields(data, category_roots):
@@ -251,6 +299,14 @@ def main():
             lines.append("")
             for field_name in sorted(uncertain_fields):
                 lines.append(f"- {field_name}")
+            lines.append("")
+
+        references = extract_references(data)
+        if references:
+            lines.append("### References")
+            lines.append("")
+            for label, url in references:
+                lines.append(f"- [{label}]({url})")
             lines.append("")
 
     report_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")

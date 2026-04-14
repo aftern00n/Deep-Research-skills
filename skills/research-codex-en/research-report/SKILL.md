@@ -48,6 +48,7 @@ The script must:
 - Support both flat JSON and nested category JSON
 - Skip values containing `[uncertain]`
 - Skip fields named in the JSON `uncertain` array
+- Render top-level `references` as a dedicated `References` section
 - Render `report.md` into `{project_dir}/report.md`
 
 ### Step 4: Confirm Output
@@ -62,6 +63,25 @@ The generator already handles:
 - Recursive formatting for dicts and lists
 - Collection of extra fields into `Other Info`
 - Filtering of uncertain values
+- Dedicated rendering for source/reference links
+
+## Reference Contract
+Canonical input format:
+
+```json
+{
+  "references": [
+    {
+      "label": "Official site",
+      "url": "https://example.com"
+    }
+  ]
+}
+```
+
+Notes:
+- New outputs should always use `references`.
+- The current generator still accepts legacy aliases such as `sources` or `links` for backward compatibility.
 
 ## Output
 - `{project_dir}/report.md` - summary report

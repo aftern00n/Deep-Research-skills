@@ -18,7 +18,8 @@ CATEGORY_MAPPING = {
     "Market Positioning": ["market_positioning", "market", "Market Positioning"],
 }
 
-SKIP_KEYS = {"_source_file", "uncertain"}
+REFERENCE_KEYS = {"references", "sources", "links", "reference_links", "source_links"}
+SKIP_KEYS = {"_source_file", "uncertain", *REFERENCE_KEYS}
 
 
 def load_fields_yaml(fields_path):

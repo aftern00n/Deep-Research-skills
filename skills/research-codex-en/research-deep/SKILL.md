@@ -54,7 +54,9 @@ Read {fields_path} to get all field definitions
 1. Output JSON according to fields defined in fields.yaml
 2. Mark uncertain field values with [uncertain]
 3. Add uncertain array at the end of JSON, listing all uncertain field names
-4. All field values must be in English
+4. Add references array at the end of JSON, listing the source links used for this item
+5. Each references item must use the exact structure `{"label": "...", "url": "https://..."}`
+6. All field values must be in English
 
 ## Output Path
 {output_path}
@@ -88,7 +90,32 @@ Each item writes one JSON file:
 Rules:
 - `item_name_slug` should replace spaces with `_` and remove filesystem-hostile characters.
 - JSON must cover every defined field when possible; if not, use `[uncertain]` and include the field name in `uncertain`.
+- JSON should include a top-level `references` array for the source links used to produce the item report.
+- `references` is the canonical source format for all newly generated outputs.
+- Each reference object must contain:
+  - `label`: short human-readable source name
+  - `url`: absolute `http` or `https` link
 - The validator script is the source of truth for schema coverage.
+
+Example:
+
+```json
+{
+  "name": "Example Item",
+  "release_date": "2025-01-01",
+  "uncertain": [],
+  "references": [
+    {
+      "label": "Official announcement",
+      "url": "https://example.com/announcement"
+    },
+    {
+      "label": "Documentation",
+      "url": "https://example.com/docs"
+    }
+  ]
+}
+```
 
 ## Agent Config
 - Background execution: Yes
