@@ -25,13 +25,11 @@ def load_fields_yaml(fields_path):
     with fields_path.open(encoding="utf-8") as handle:
         data = yaml.safe_load(handle) or {}
 
-    raw_categories = data.get("field_categories")
-    if raw_categories is None:
-        raw_categories = data.get("categories", [])
+    raw_categories = data.get("field_categories", [])
 
     items = []
     for category in raw_categories or []:
-        category_name = category.get("category") or category.get("name") or "Unknown"
+        category_name = category.get("category") or "Unknown"
         for field in category.get("fields", []) or []:
             field_name = field.get("name")
             if not field_name:

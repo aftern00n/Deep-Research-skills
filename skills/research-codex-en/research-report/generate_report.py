@@ -32,20 +32,10 @@ def load_yaml(path):
 
 
 def load_field_categories(fields_data):
-    if "field_categories" in fields_data:
-        categories = fields_data.get("field_categories") or []
-        return [
-            {
-                "category": category.get("category") or category.get("name") or "Uncategorized",
-                "fields": category.get("fields") or [],
-            }
-            for category in categories
-        ]
-
-    categories = fields_data.get("categories") or []
+    categories = fields_data.get("field_categories") or []
     return [
         {
-            "category": category.get("category") or category.get("name") or "Uncategorized",
+            "category": category.get("category") or "Uncategorized",
             "fields": category.get("fields") or [],
         }
         for category in categories
