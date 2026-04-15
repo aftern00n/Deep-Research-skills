@@ -30,7 +30,7 @@ Resolve:
 - `output_dir`: resolve `execution.output_dir` relative to `project_dir` if needed
 - `item_name_slug`: replace spaces with `_` and remove filesystem-hostile characters from each item name
 - `output_path`: `{output_dir}/{item_name_slug}.json`
-- `validator_path`: absolute path to the bundled validator script in this skill directory
+- `validator_path`: absolute path to the bundled `validate_json.py` script from the `research` skill
 
 ### Step 2: Resume Check
 - Create `output_dir` if missing
