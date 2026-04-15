@@ -28,6 +28,8 @@ Resolve:
 - `project_dir`: absolute path from `outline.yaml`
 - `fields_path`: `{project_dir}/fields.yaml`
 - `output_dir`: resolve `execution.output_dir` relative to `project_dir` if needed
+- `item_name_slug`: replace spaces with `_` and remove filesystem-hostile characters from each item name
+- `output_path`: `{output_dir}/{item_name_slug}.json`
 - `validator_path`: absolute path to the bundled validator script in this skill directory
 
 ### Step 2: Resume Check
@@ -38,7 +40,7 @@ Resolve:
 ### Step 3: Batch Execution
 - Execute in batches of `batch_size`
 - Each agent handles `items_per_agent` items
-- Use background parallel agents when possible
+- Launch the `web_researcher` agent in background parallel mode when possible
 - Ask for user confirmation before starting the next batch only if the workload is large or the user asked for staged execution
 
 **Hard Constraint**: Reproduce the following prompt exactly, only replacing variables in `{...}`.
